@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: biblioteca
+      DB_USER: pamela
+      DB_PASS: clave123
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: biblioteca
+      POSTGRES_USER: pamela
+      POSTGRES_PASSWORD: clave123
+    ports:
+      - "5433:5432"  # usamos 5433 afuera para no chocar con el otro contenedor
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+
