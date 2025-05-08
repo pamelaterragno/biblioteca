@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 import os
+from agregar_campos_libros import completar_datos_libro
+
 
 # Configuración inicial
 st.set_page_config(page_title="Mi Biblioteca", layout="wide")
@@ -62,6 +64,9 @@ with st.sidebar.form("form_agregar", clear_on_submit=True):
     enviado = st.form_submit_button("Guardar libro")
 
 if enviado and titulo:
+    datos_extra = completar_datos_libro(titulo, autor)
+    anio_obtenido = datos_extra.get("año") or anio
+
     with engine.connect() as conn:
         conn.execute(text("""
             INSERT INTO libros (titulo, autor, puntuacion, estado, anio, pendiente_comprar, cita, releido)
@@ -96,6 +101,11 @@ if not libros.empty:
             st.markdown(f"⭐ {row['puntuacion']} | Estado: {row['estado']} | Releído: {'✅' if row['releido'] else '❌'}")
             st.markdown(f"📝 _{row['cita']}_")
             st.markdown(f"🛒 Pendiente comprar: {row['pendiente_comprar']}")
+            # Consulta en Open Library
+            datos_extra = completar_datos_libro(row["titulo"], row["autor"])
+            st.markdown(f"🔎 **ISBN:** {datos_extra.get('isbn') or 'No disponible'}")
+            st.markdown(f"🏢 **Editorial:** {datos_extra.get('editorial') or 'No disponible'}")
+            st.markdown(f"🌐 **Idioma:** {datos_extra.get('idioma') or 'No disponible'}")
             st.markdown("---")
         with col2:
             if st.button("🗑️", key=f"delete_{row['id']}"):
