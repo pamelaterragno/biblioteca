@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+.env
+
+# Logs
+*.log
+
+# Docker
+*.pid
+*.sock
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Backup/editor
+*.swp
+*.bak
+*.tmp
+*~
+
+# Archivos específicos de tu entorno
+gitpush_bibliotecta.sh
