@@ -5,7 +5,7 @@ import os
 
 # Configuración inicial
 st.set_page_config(page_title="Mi Biblioteca", layout="wide")
-st.title("📚 Mi Biblioteca Personal")
+st.title("Mi Biblioteca Personal")
 
 # Parámetros de conexión desde variables de entorno
 DB_HOST = os.environ.get("DB_HOST", "localhost")
