@@ -102,5 +102,5 @@ for id_libro, titulo, autor in libros:
 conn.commit()
 cursor.close()
 conn.close()
-print("🟢 ¡Todos los libros fueron completados correctamente!")
+print("¡Todos los libros fueron completados correctamente!")
 

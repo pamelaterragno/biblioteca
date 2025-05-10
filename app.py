@@ -5,21 +5,21 @@ import os
 import subprocess
 from agregar_campos_libros import completar_datos_libro
 
-# 🧩 Configuración inicial
+#Configuración inicial
 st.set_page_config(page_title="Mi Biblioteca", layout="wide")
 st.title("📚 Mi Biblioteca Personal")
 
-# 🌐 Parámetros de conexión desde variables de entorno
+#Parámetros de conexión desde variables de entorno
 DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_PORT = os.environ.get("DB_PORT", "5432")
 DB_NAME = os.environ.get("DB_NAME", "biblioteca")
 DB_USER = os.environ.get("DB_USER", "pamela")
 DB_PASS = os.environ.get("DB_PASS", "clave123")
 
-# 🔌 Crear conexión con SQLAlchemy
+#Crear conexión con SQLAlchemy
 engine = create_engine(f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
-# 🛠️ Crear tabla si no existe (¡agregá las columnas nuevas si no están!)
+#Crear tabla si no existe
 with engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS libros (
@@ -40,7 +40,7 @@ with engine.connect() as conn:
     """))
     conn.commit()
 
-# 🔄 Botón para completar datos faltantes desde Google Books API
+#Botón para completar datos faltantes desde Google Books API
 if st.button("🔄 Completar datos faltantes:"):
     with st.spinner("Completando datos..."):
         try:
@@ -55,21 +55,21 @@ if st.button("🔄 Completar datos faltantes:"):
         except Exception as e:
             st.error(f"❌ Error al ejecutar el script: {e}")
 
-# 📥 Leer libros desde base
+#Leer libros desde base
 def cargar_libros():
     return pd.read_sql("SELECT * FROM libros ORDER BY id DESC", engine)
 
-# 🗑️ Eliminar libro
+#Eliminar libro
 def eliminar_libro(id):
     with engine.connect() as conn:
         conn.execute(text("DELETE FROM libros WHERE id = :id"), {"id": id})
         conn.commit()
 
-# 🔁 Estado inicial
+#Estado inicial
 if "recargar" not in st.session_state:
     st.session_state["recargar"] = False
 
-# ➕ Formulario para agregar libros
+#Formulario para agregar libros
 st.sidebar.header("➕ Agregar libro")
 with st.sidebar.form("form_agregar", clear_on_submit=True):
     titulo = st.text_input("Título")
@@ -116,10 +116,10 @@ if enviado and titulo:
 
 
 
-# 📋 Mostrar libros registrados
+#Mostrar libros registrados
 st.subheader("📖 Libros registrados")
 
-# 🔍 Filtro por búsqueda
+#Filtro por búsqueda
 busqueda = st.text_input("🔎 Buscar por título o autor")
 
 libros = cargar_libros() if st.session_state["recargar"] else cargar_libros()
