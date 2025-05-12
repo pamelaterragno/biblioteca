@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 import os
-import subprocess
 from agregar_campos_libros import completar_datos_libro
+from mostrar_estadisticas import mostrar_estadisticas
 
 #Configuración inicial
 st.set_page_config(page_title="Mi Biblioteca", layout="wide")
@@ -40,129 +40,146 @@ with engine.connect() as conn:
     """))
     conn.commit()
 
-#Botón para completar datos faltantes desde Google Books API
-if st.button("🔄 Completar datos faltantes:"):
-    with st.spinner("Completando datos..."):
-        try:
-            result = subprocess.run(["python", "completar_datos_bdd.py"], capture_output=True, text=True)
-            if result.returncode == 0:
-                st.success("✅ Datos completados correctamente.")
-                st.text(result.stdout)
+# Tabs para navegación
+tab1, tab2 = st.tabs(["📚 Libros", "📊 Estadísticas"])
+
+with tab1:
+
+
+    if st.button("🔄 Completar datos faltantes:"): 
+        with st.spinner("Completando datos..."):
+            try:
+                with engine.connect() as conn:
+                    df = pd.read_sql("SELECT * FROM libros", conn)
+                    actualizados = 0
+                    for _, row in df.iterrows():
+                        vacios = sum([
+                            pd.isna(row["anio_publicacion"]),
+                            pd.isna(row["isbn"]),
+                            pd.isna(row["editorial"]),
+                            pd.isna(row["idioma"])
+                        ]) 
+                        if vacios >= 3:
+                            datos = completar_datos_libro(row["titulo"], row["autor"])
+                            conn.execute(text("""
+                                UPDATE libros
+                                SET anio_publicacion = :anio_publicacion,
+                                    isbn = :isbn,
+                                    editorial = :editorial,
+                                    idioma = :idioma
+                                WHERE id = :id
+                            """), {
+                                "anio_publicacion": datos.get("anio_publicacion"),
+                                "isbn": datos.get("isbn"),
+                                "editorial": datos.get("editorial"),
+                                "idioma": datos.get("idioma"),
+                                "id": row["id"]
+                            }) 
+                            actualizados += 1 
+                    conn.commit()
+                st.success(f"✅ Datos completados en {actualizados} libro(s).")
                 st.session_state["recargar"] = True
-            else:
-                st.error("❌ Hubo un error al ejecutar el script.")
-                st.text(result.stderr)
-        except Exception as e:
-            st.error(f"❌ Error al ejecutar el script: {e}")
+            except Exception as e:
+                st.error(f"❌ Error al completar datos: {e}")
 
-#Leer libros desde base
-def cargar_libros():
-    return pd.read_sql("SELECT * FROM libros ORDER BY id DESC", engine)
+    def cargar_libros():
+        return pd.read_sql("SELECT * FROM libros ORDER BY id DESC", engine)
 
-#Eliminar libro
-def eliminar_libro(id):
-    with engine.connect() as conn:
-        conn.execute(text("DELETE FROM libros WHERE id = :id"), {"id": id})
-        conn.commit()
+    def eliminar_libro(id):
+        with engine.connect() as conn:
+            conn.execute(text("DELETE FROM libros WHERE id = :id"), {"id": id})
+            conn.commit()
 
-#Estado inicial
-if "recargar" not in st.session_state:
+    if "recargar" not in st.session_state:
+        st.session_state["recargar"] = False
+
+    st.sidebar.header("➕ Agregar libro")
+    with st.sidebar.form("form_agregar", clear_on_submit=True):
+        titulo = st.text_input("Título")
+        autor = st.text_input("Autor")
+        puntuacion = st.radio("Puntuación (1 a 5)", options=[1, 2, 3, 4, 5], horizontal=True)
+        estado = st.selectbox("Estado", ["Por leer", "Leyendo", "Terminado"])
+        anio_lectura = st.number_input("Año", min_value=2024, max_value=2100, step=1, format="%d")
+        pendiente = st.selectbox("Pendiente comprar", ["No", "SI", "Ya lo tengo"])
+        cita = st.text_area("Cita o comentario")
+        releido = st.checkbox("¿Releído?")
+        enviado = st.form_submit_button("Guardar libro")
+
+    if enviado and titulo:
+        datos_extra = completar_datos_libro(titulo, autor)
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO libros (
+                    titulo, autor, puntuacion, estado, anio_lectura,
+                    pendiente_comprar, cita, releido,
+                    anio_publicacion, isbn, editorial, idioma
+                )
+                VALUES (
+                    :titulo, :autor, :puntuacion, :estado, :anio_lectura,
+                    :pendiente, :cita, :releido,
+                    :anio_publicacion, :isbn, :editorial, :idioma
+                )
+            """), {
+                "titulo": titulo,
+                "autor": autor,
+                "puntuacion": puntuacion,
+                "estado": estado,
+                "anio_lectura": anio_lectura,
+                "pendiente": pendiente,
+                "cita": cita,
+                "releido": releido,
+                "anio_publicacion": datos_extra.get("anio_publicacion"),
+                "isbn": datos_extra.get("isbn"),
+                "editorial": datos_extra.get("editorial"),
+                "idioma": datos_extra.get("idioma")
+            })
+            conn.commit()
+        st.toast("✅ Libro agregado correctamente.", icon='📖')
+        st.session_state["recargar"] = True
+
+    st.subheader("📖 Libros registrados")
+    busqueda = st.text_input("🔎 Buscar por título o autor")
+
+    libros = cargar_libros() if st.session_state["recargar"] else cargar_libros()
     st.session_state["recargar"] = False
 
-#Formulario para agregar libros
-st.sidebar.header("➕ Agregar libro")
-with st.sidebar.form("form_agregar", clear_on_submit=True):
-    titulo = st.text_input("Título")
-    autor = st.text_input("Autor")
-    puntuacion = st.radio("Puntuación (1 a 5)", options=[1, 2, 3, 4, 5], horizontal=True)
-    estado = st.selectbox("Estado", ["Por leer", "Leyendo", "Terminado"])
-    anio_lectura = st.number_input("Año", min_value=2024, max_value=2100, step=1, format="%d")
-    pendiente = st.selectbox("Pendiente comprar", ["No", "SI", "Ya lo tengo"])
-    cita = st.text_area("Cita o comentario")
-    releido = st.checkbox("¿Releído?")
-    enviado = st.form_submit_button("Guardar libro")
-
-if enviado and titulo:
-    datos_extra = completar_datos_libro(titulo, autor)
-    with engine.connect() as conn:
-        conn.execute(text("""
-            INSERT INTO libros (
-                titulo, autor, puntuacion, estado, anio_lectura,
-                pendiente_comprar, cita, releido,
-                anio_publicacion, isbn, editorial, idioma
-            )
-            VALUES (
-                :titulo, :autor, :puntuacion, :estado, :anio_lectura,
-                :pendiente, :cita, :releido,
-                :anio_publicacion, :isbn, :editorial, :idioma
-            )
-        """), {
-            "titulo": titulo,
-            "autor": autor,
-            "puntuacion": puntuacion,
-            "estado": estado,
-            "anio_lectura": anio_lectura,
-            "pendiente": pendiente,
-            "cita": cita,
-            "releido": releido,
-            "anio_publicacion": datos_extra.get("anio_publicacion"),
-            "isbn": datos_extra.get("isbn"),
-            "editorial": datos_extra.get("editorial"),
-            "idioma": datos_extra.get("idioma")
-        })
-        conn.commit()
-    st.toast("✅ Libro agregado correctamente.", icon='📖')
-    st.session_state["recargar"] = True
+    if busqueda:
+        libros = libros[
+            libros['titulo'].str.contains(busqueda, case=False, na=False) |
+            libros['autor'].str.contains(busqueda, case=False, na=False)
+        ]
+    if not libros.empty:
+        for index, row in libros.iterrows():
+            col1, col2 = st.columns([6, 1])
+            with col1:
+                titulo_visible = f"{row['titulo']} — {row['autor']} — {row['anio_lectura']}"
+                with st.expander(titulo_visible, expanded=False):
+                    st.markdown(
+                        f"""
+                        <ul style='font-size:14px; line-height: 1.6'>
+                            <li>⭐ <b>Puntuación:</b> {row['puntuacion']}</li>
+                            <li>📘 <b>Estado:</b> {row['estado']}</li>
+                            <li>🔁 <b>Releído:</b> {'✅' if row['releido'] else '❌'}</li>
+                            <li>📝 <i>{row['cita']}</i></li>
+                            <li>🛒 <b>Pendiente comprar:</b> {row['pendiente_comprar']}</li>
+                            <li>🗓️  <b>Publicado en:</b> {row['anio_publicacion'] or 'Desconocido'}</li>
+                            <li>🔤 <b>Idioma:</b> {row['idioma'] or 'Desconocido'}</li>
+                            <li>🏢 <b>Editorial:</b> {row['editorial'] or 'Desconocido'}</li>
+                            <li>🔢 <b>ISBN:</b> {row['isbn'] or 'Desconocido'}</li>
+                        </ul>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            with col2:
+                if st.button("🗑️ ", key=f"delete_{row['id']}"):
+                    eliminar_libro(row['id'])
+                    st.toast(f"Libro '{row['titulo']}' eliminado.", icon='❌')
+                    st.session_state["recargar"] = True
+                    st.markdown("<meta http-equiv='refresh' content='0'>", unsafe_allow_html=True)
+                    st.stop()
+    else:
+        st.info("No hay libros registrados aún.")
 
 
-
-#Mostrar libros registrados
-st.subheader("📖 Libros registrados")
-
-#Filtro por búsqueda
-busqueda = st.text_input("🔎 Buscar por título o autor")
-
-libros = cargar_libros() if st.session_state["recargar"] else cargar_libros()
-st.session_state["recargar"] = False
-
-if busqueda:
-    libros = libros[
-        libros['titulo'].str.contains(busqueda, case=False, na=False) |
-        libros['autor'].str.contains(busqueda, case=False, na=False)
-    ]
-if not libros.empty:
-    for index, row in libros.iterrows():
-        col1, col2 = st.columns([6, 1])
-        with col1:
-            # expander
-            titulo_visible = f"{row['titulo']} — {row['autor']} — {row['anio_lectura']}"
-            with st.expander(titulo_visible, expanded=False):
-                st.markdown(
-                    f"""
-                    <ul style='font-size:14px; line-height: 1.6'>
-                        <li>⭐ <b>Puntuación:</b> {row['puntuacion']}</li>
-                        <li>📘 <b>Estado:</b> {row['estado']}</li>
-                        <li>🔁 <b>Releído:</b> {'✅' if row['releido'] else '❌'}</li>
-                        <li>📝 <i>{row['cita']}</i></li>
-                        <li>🛒 <b>Pendiente comprar:</b> {row['pendiente_comprar']}</li>
-                        <li>🗓️  <b>Publicado en:</b> {row['anio_publicacion'] or 'Desconocido'}</li>
-                        <li>🔤 <b>Idioma:</b> {row['idioma'] or 'Desconocido'}</li>
-                        <li>🏢 <b>Editorial:</b> {row['editorial'] or 'Desconocido'}</li>
-                        <li>🔢 <b>ISBN:</b> {row['isbn'] or 'Desconocido'}</li>
-                    </ul>
-                    """,
-                    unsafe_allow_html=True
-                )
-        with col2:
-            if st.button("🗑️ ", key=f"delete_{row['id']}"):
-                eliminar_libro(row['id'])
-                st.toast(f"Libro '{row['titulo']}' eliminado.", icon='❌')
-                st.session_state["recargar"] = True
-                st.markdown("<meta http-equiv='refresh' content='0'>", unsafe_allow_html=True)
-                st.stop()
-
-
-
-else:
-    st.info("No hay libros registrados aún.")
-
+with tab2:
+    mostrar_estadisticas()

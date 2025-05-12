@@ -1,18 +1,16 @@
-# Imagen base liviana de Python
 FROM python:3.10-slim
 
-# Directorio de trabajo dentro del contenedor
+# Crear directorio de trabajo
 WORKDIR /app
 
-# Copiar archivo de dependencias e instalarlas
+# Copiar solo requirements primero (mejor uso de cache)
 COPY requirements.txt .
+
+# Instalar dependencias
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto de los archivos al contenedor
+# Luego copiar el resto del proyecto
 COPY . .
 
-# Exponer el puerto donde corre Streamlit
-EXPOSE 8501
-
-# Comando que lanza la aplicación
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Comando por defecto
+CMD ["streamlit", "run", "app.py"]

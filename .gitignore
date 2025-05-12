@@ -24,3 +24,6 @@ Thumbs.db
 
 # Archivos específicos de tu entorno
 gitpush_bibliotecta.sh
+
+# Ignorar archivos CSV
+*.csv
