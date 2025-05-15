@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 from sqlalchemy import create_engine, text
 import os
@@ -45,43 +45,6 @@ tab1, tab2 = st.tabs(["📚 Libros", "📊 Estadísticas"])
 
 with tab1:
 
-
-    if st.button("🔄 Completar datos faltantes:"): 
-        with st.spinner("Completando datos..."):
-            try:
-                with engine.connect() as conn:
-                    df = pd.read_sql("SELECT * FROM libros", conn)
-                    actualizados = 0
-                    for _, row in df.iterrows():
-                        vacios = sum([
-                            pd.isna(row["anio_publicacion"]),
-                            pd.isna(row["isbn"]),
-                            pd.isna(row["editorial"]),
-                            pd.isna(row["idioma"])
-                        ]) 
-                        if vacios >= 3:
-                            datos = completar_datos_libro(row["titulo"], row["autor"])
-                            conn.execute(text("""
-                                UPDATE libros
-                                SET anio_publicacion = :anio_publicacion,
-                                    isbn = :isbn,
-                                    editorial = :editorial,
-                                    idioma = :idioma
-                                WHERE id = :id
-                            """), {
-                                "anio_publicacion": datos.get("anio_publicacion"),
-                                "isbn": datos.get("isbn"),
-                                "editorial": datos.get("editorial"),
-                                "idioma": datos.get("idioma"),
-                                "id": row["id"]
-                            }) 
-                            actualizados += 1 
-                    conn.commit()
-                st.success(f"✅ Datos completados en {actualizados} libro(s).")
-                st.session_state["recargar"] = True
-            except Exception as e:
-                st.error(f"❌ Error al completar datos: {e}")
-
     def cargar_libros():
         return pd.read_sql("SELECT * FROM libros ORDER BY id DESC", engine)
 
@@ -107,6 +70,7 @@ with tab1:
 
     if enviado and titulo:
         datos_extra = completar_datos_libro(titulo, autor)
+
         with engine.connect() as conn:
             conn.execute(text("""
                 INSERT INTO libros (
@@ -129,9 +93,9 @@ with tab1:
                 "cita": cita,
                 "releido": releido,
                 "anio_publicacion": datos_extra.get("anio_publicacion"),
-                "isbn": datos_extra.get("isbn"),
-                "editorial": datos_extra.get("editorial"),
-                "idioma": datos_extra.get("idioma")
+                "isbn": datos_extra.get("isbn"),                         
+                "editorial": datos_extra.get("editorial"),                
+                "idioma": datos_extra.get("idioma")                       
             })
             conn.commit()
         st.toast("✅ Libro agregado correctamente.", icon='📖')
@@ -179,7 +143,6 @@ with tab1:
                     st.stop()
     else:
         st.info("No hay libros registrados aún.")
-
 
 with tab2:
     mostrar_estadisticas()
