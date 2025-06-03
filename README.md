@@ -1,71 +1,86 @@
 # 📚 Mi Biblioteca Personal
 
-Aplicación web desarrollada con **Streamlit + PostgreSQL** para registrar, visualizar y analizar libros leídos.
+Una aplicación web para gestionar tu colección de libros de forma personalizada.
 
----
+## 🚀 Características principales
 
-## 🚀 Cómo iniciar el entorno
+- **Registro y Login de Usuarios**:
+  - Cada usuario crea su cuenta y gestiona su propia biblioteca de libros.
+  - Autenticación segura con contraseñas encriptadas.
 
-1. Cloná el proyecto:
-   ```bash
-   git clone https://github.com/tuusuario/streamlit_libros.git
-   cd streamlit_libros
-   ```
+- **Gestión Personalizada de Libros**:
+  - Cada usuario tiene acceso solo a su lista de libros.
+  - Agrega libros manualmente o con autocompletado de datos desde la Google Books API.
 
-2. Iniciá el entorno:
-   ```bash
-   ./iniciar.sh start
-   ```
+- **Autocompletado Inteligente**:
+  - Al ingresar título (y opcionalmente autor), la app completa automáticamente:
+    - Título oficial
+    - Autor/es
+    - Año de publicación
+    - ISBN
+    - Editorial
+    - Idioma
 
-3. Accedé desde el navegador a:
-   ```
-   http://localhost:8501
-   ```
+- **Prevención de Duplicados**:
+  - La aplicación valida que no existan libros repetidos (título + autor) por usuario.
 
-> 💡 El entorno también levanta un contenedor de PostgreSQL automáticamente con tus datos.
+- **Estadísticas Personalizadas**:
+  - Cada usuario puede visualizar estadísticas sobre sus propios libros:
+    - Total de libros
+    - Promedio de puntuación
+    - Estado de lectura
+    - Autores más leídos
+    - Distribución de puntuaciones
 
----
+- **Interfaz Limpia y Sencilla**:
+  - Formularios de carga optimizados.
+  - Experiencia de usuario mejorada.
 
-## ⚙️ Requisitos
+- **Arquitectura Modular**:
+  - Conexiones a base de datos centralizadas en un módulo `db.py` para mayor mantenibilidad.
 
-- Docker + Docker Compose
-- VS Code (opcional)
-- Python 3.10+ (si lo corrés fuera de Docker)
+## ⚙️ Tecnologías utilizadas
 
----
+- Python 3
+- Streamlit
+- PostgreSQL
+- SQLAlchemy
+- psycopg2
+- Google Books API
+- Plotly (para visualizaciones)
 
-## 🧱 Estructura del proyecto
+## 🚀 Cómo ejecutar
 
-```
-📁 streamlit_libros/
-├── app.py                   # Interfaz principal de Streamlit
-├── agregar_campos_libros.py # Consulta datos a OpenLibrary
-├── mostrar_estadisticas.py  # Muestra estadísticas gráficas
-├── libros.csv               # Dataset inicial
-├── iniciar.sh               # Script para iniciar el entorno
-├── docker-compose.yml       # Configuración de servicios
-├── Dockerfile               # Imagen personalizada
-├── requirements.txt         # Dependencias del proyecto
-└── backup_scripts/          # Scripts antiguos no utilizados
-```
+1. Clona este repositorio:
+    ```bash
+    git clone https://github.com/tu_usuario/tu_repositorio.git
+    ```
 
----
+2. Instala las dependencias:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-## 📦 Instalación manual (sin Docker)
+3. Corre la app:
+    ```bash
+    streamlit run app.py
+    ```
 
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
-```
+4. Asegúrate de tener PostgreSQL corriendo y las variables de entorno configuradas:
+    ```env
+    DB_HOST=localhost
+    DB_PORT=5432
+    DB_NAME=biblioteca
+    DB_USER=tu_usuario
+    DB_PASS=tu_contraseña
+    ```
 
----
+## 📝 Mejoras recientes
 
-## ✨ Funcionalidades
-
-- Agregar libros y completarlos automáticamente con OpenLibrary
-- Filtrar y buscar libros
-- Ver estadísticas de lectura
-- Marcar libros como leídos o pendientes de compra
-- Eliminar libros de forma interactiva
+"Mejoras en sistema de usuarios y personalización de la biblioteca:
+- Implementación de registro y login de usuarios con autenticación segura.
+- Personalización completa de la experiencia: cada usuario gestiona su propia lista de libros y estadísticas.
+- Autocompletado inteligente de título, autor, año, editorial, idioma e ISBN usando Google Books API al agregar un libro.
+- Validación para evitar duplicados: no permite registrar el mismo título y autor para un mismo usuario.
+- Estadísticas personalizadas: solo se muestran los datos del usuario logueado.
+- Refactorización de la conexión a base de datos mediante módulo db.py para mayor eficiencia y mantenimiento."
