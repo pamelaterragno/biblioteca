@@ -1,6 +1,6 @@
-import psycopg2
 import pandas as pd
 from typing import Optional
+from db import conectar_db
 
 def buscar_libros(
     titulo: Optional[str] = None,
@@ -15,17 +15,26 @@ def buscar_libros(
     puntuacion: Optional[int] = None
 ) -> pd.DataFrame:
 
-    conn = psycopg2.connect(
-        dbname="biblioteca",
-        user="pamela",
-        password="clave123",
-        host="db",
-        port="5432"
-    )
-    cursor = conn.cursor()
+    from streamlit import session_state
 
-    query = "SELECT * FROM libros WHERE 1=1"
-    valores = []
+    usuario = session_state.get("usuario")
+    if not usuario:
+        return pd.DataFrame()
+
+    # Obtener usuario_id
+    conn = conectar_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM usuarios WHERE username = %s", (usuario,))
+    result = cur.fetchone()
+    if not result:
+        cur.close()
+        conn.close()
+        return pd.DataFrame()
+
+    usuario_id = result[0]
+
+    query = "SELECT * FROM libros WHERE usuario_id = %s"
+    valores = [usuario_id]
 
     if titulo:
         query += " AND LOWER(titulo) LIKE %s"
@@ -58,9 +67,10 @@ def buscar_libros(
         query += " AND puntuacion = %s"
         valores.append(puntuacion)
 
-    cursor.execute(query, valores)
-    columnas = [desc[0] for desc in cursor.description]
-    resultados = cursor.fetchall()
+    cur.execute(query, valores)
+    columnas = [desc[0] for desc in cur.description]
+    resultados = cur.fetchall()
+    cur.close()
     conn.close()
 
     df = pd.DataFrame(resultados, columns=columnas)

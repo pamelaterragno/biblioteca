@@ -1,6 +1,6 @@
 import pandas as pd
-from sqlalchemy import create_engine
 import sys
+from db import engine 
 
 # Verificación de argumento
 if len(sys.argv) != 2:
@@ -8,12 +8,6 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 csv_path = sys.argv[1]
-
-USER = "pamela"
-PASSWORD = "clave123"
-HOST = "db"
-PORT = "5432"
-DB = "biblioteca"
 
 df = pd.read_csv(csv_path)
 
@@ -40,7 +34,7 @@ def convertir_puntuacion(val):
 
 df["puntuacion"] = df["puntuacion"].apply(convertir_puntuacion)
 
-# Convertir releido a booleano
+# Convertir releído a booleano
 df["releido"] = df["releido"].fillna(False).apply(lambda x: str(x).strip().lower() in ["si", "true", "1"])
 
 # Completar columnas faltantes
@@ -49,9 +43,7 @@ df["isbn"] = None
 df["editorial"] = None
 df["idioma"] = None
 
-# Conexión e inserción
-engine = create_engine(f"postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DB}")
+# Inserción en la base
 df.to_sql("libros", engine, if_exists="append", index=False)
 
-print(f"✅ Datos insertados correctamente desde {csv_path}")
-
+print(f"Datos insertados correctamente desde {csv_path}")

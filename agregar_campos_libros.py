@@ -1,8 +1,12 @@
 import requests
 
 def completar_datos_libro(titulo, autor=""):
-    query = f"{titulo} {autor}".strip().replace(" ", "+")
-    url = f"https://www.googleapis.com/books/v1/volumes?q=intitle:{query}&maxResults=1"
+    query = f"intitle:{titulo.strip()}"
+    if autor.strip():
+        query += f"+inauthor:{autor.strip()}"
+    query = query.replace(" ", "+")
+
+    url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=1"
 
     try:
         response = requests.get(url)
@@ -10,11 +14,21 @@ def completar_datos_libro(titulo, autor=""):
         data = response.json()
 
         if "items" not in data or len(data["items"]) == 0:
-            return {"año": None, "isbn": None, "editorial": None, "idioma": None}
+            return {
+                "titulo": titulo.strip(),
+                "autor": autor.strip(),
+                "anio_publicacion": None,
+                "isbn": None,
+                "editorial": None,
+                "idioma": None
+            }
 
         info = data["items"][0]["volumeInfo"]
 
-        # Extraer datos
+        # Extraer título y autores también
+        titulo_api = info.get("title", titulo.strip())
+        autores_api = ", ".join(info.get("authors", [autor.strip()])) if info.get("authors") else autor.strip()
+
         año = info.get("publishedDate", "")[:4] if "publishedDate" in info else None
         isbn = None
         if "industryIdentifiers" in info:
@@ -27,7 +41,9 @@ def completar_datos_libro(titulo, autor=""):
         idioma = info.get("language")
 
         return {
-            "año": int(año) if año and año.isdigit() else None,
+            "titulo": titulo_api,
+            "autor": autores_api,
+            "anio_publicacion": int(año) if año and año.isdigit() else None,
             "isbn": isbn,
             "editorial": editorial,
             "idioma": idioma
@@ -35,4 +51,11 @@ def completar_datos_libro(titulo, autor=""):
 
     except Exception as e:
         print(f"Error al consultar Google Books: {e}")
-        return {"año": None, "isbn": None, "editorial": None, "idioma": None}
+        return {
+            "titulo": titulo.strip(),
+            "autor": autor.strip(),
+            "anio_publicacion": None,
+            "isbn": None,
+            "editorial": None,
+            "idioma": None
+        }

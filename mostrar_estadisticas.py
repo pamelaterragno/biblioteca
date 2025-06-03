@@ -1,22 +1,37 @@
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine
 import plotly.express as px
+from db import engine, conectar_db
+from sqlalchemy import text
+
+def obtener_id_usuario(username):
+    conn = conectar_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM usuarios WHERE username = %s", (username,))
+    user_id = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return user_id
 
 def mostrar_estadisticas():
     st.title("📊 Estadísticas de Libros")
 
-    # Conexión a la base de datos
-    engine = create_engine("postgresql://pamela:clave123@db:5432/biblioteca")
+    usuario = st.session_state.get("usuario")
+    if not usuario:
+        st.warning("No hay usuario logueado.")
+        return
+
+    usuario_id = obtener_id_usuario(usuario)
 
     try:
-        df = pd.read_sql("SELECT * FROM libros", engine)
+        query = text("SELECT * FROM libros WHERE usuario_id = :usuario_id")
+        df = pd.read_sql_query(query, engine, params={"usuario_id": usuario_id})
     except Exception as e:
         st.error(f"Error al conectar o leer datos: {e}")
         return
 
     if df.empty:
-        st.warning("No hay datos disponibles en la base.")
+        st.warning("No hay datos disponibles para mostrar.")
         return
 
     col1, col2 = st.columns(2)
@@ -28,7 +43,7 @@ def mostrar_estadisticas():
             prom = df["puntuacion"].dropna().mean()
             st.metric("⭐ Promedio de puntuación", f"{prom:.2f}")
 
-    # --- Libros por año de lectura ---
+    # Libros por año de lectura
     if "anio_lectura" in df.columns:
         st.subheader("📅 Libros por Año de Lectura")
         conteo_anio = df["anio_lectura"].value_counts().sort_index()
@@ -37,7 +52,7 @@ def mostrar_estadisticas():
                      title="Cantidad de libros por año")
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- Estado de lectura ---
+    # Estado de lectura
     if "estado" in df.columns:
         st.subheader("📘 Estado de Lectura")
         conteo_estado = df["estado"].value_counts()
@@ -45,7 +60,7 @@ def mostrar_estadisticas():
                      title="Distribución por estado")
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- Autores más leídos ---
+    # Autores más leídos
     if "autor" in df.columns:
         st.subheader("👩‍💼 Autores más Leídos")
         conteo_autores = df["autor"].value_counts().head(10)
@@ -54,7 +69,7 @@ def mostrar_estadisticas():
                      title="Top 10 autores más leídos")
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- Puntuaciones ---
+    # Puntuaciones
     if "puntuacion" in df.columns:
         st.subheader("⭐ Distribución de Puntuaciones")
         puntuacion_count = df["puntuacion"].value_counts().sort_index()
